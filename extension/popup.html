@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Minguito</title>
+    <style>
+      :root {
+        --bg: #0f0f17;
+        --card: #1a1a26;
+        --line: #2a2a3a;
+        --text: #e9e9f1;
+        --muted: #9a9ab0;
+        --accent: #7c3aed;
+        --accent-2: #22c55e;
+        --danger: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 320px;
+        margin: 0;
+        font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      header h1 { font-size: 15px; margin: 0; }
+      header .dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--accent);
+      }
+      .section {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+      .modes { display: flex; gap: 6px; }
+      .modes button {
+        flex: 1; padding: 9px 0; border: 1px solid var(--line);
+        background: var(--card); color: var(--text); border-radius: 8px;
+        cursor: pointer; font-weight: 600;
+      }
+      .modes button.active[data-mode="ON"]  { background: var(--accent-2); border-color: var(--accent-2); color: #06210f; }
+      .modes button.active[data-mode="OFF"] { background: var(--danger);  border-color: var(--danger);  color: #2a0606; }
+      .modes button.active[data-mode="C2C"] { background: var(--accent);  border-color: var(--accent);  color: #fff; }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; }
+      .row label { color: var(--text); }
+      input[type="number"] {
+        width: 72px; padding: 5px 7px; background: var(--bg); border: 1px solid var(--line);
+        border-radius: 6px; color: var(--text); text-align: right;
+      }
+      input[type="text"] {
+        width: 100%; padding: 7px 8px; background: var(--bg); border: 1px solid var(--line);
+        border-radius: 6px; color: var(--text);
+      }
+      input[type="range"] { width: 130px; }
+      input[type="time"] {
+        padding: 4px 6px; background: var(--bg); border: 1px solid var(--line);
+        border-radius: 6px; color: var(--text); color-scheme: dark;
+      }
+      .sub { color: var(--muted); font-size: 11px; }
+      .sounds { display: flex; flex-wrap: wrap; gap: 6px; }
+      .sounds label {
+        display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px;
+        background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+      }
+      .group { transition: opacity .15s; }
+      .group.disabled { opacity: .4; pointer-events: none; }
+      .status { font-weight: 600; }
+      .status.connected { color: var(--accent-2); }
+      .status.connecting { color: #eab308; }
+      .status.disconnected, .status.error { color: var(--danger); }
+      .actions { display: flex; gap: 8px; padding: 12px 14px; }
+      .actions button {
+        flex: 1; padding: 9px 0; border-radius: 8px; border: 1px solid var(--line);
+        background: var(--card); color: var(--text); cursor: pointer; font-weight: 600;
+      }
+      .actions .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="icons/icon48.png" width="22" height="22" alt="" style="border-radius:5px;" />
+      <h1>Minguito</h1>
+      <span class="dot" id="modeDot" style="margin-left:auto;"></span>
+    </header>
+
+    <div class="section">
+      <div class="label">Mode</div>
+      <div class="modes" id="modes">
+        <button data-mode="OFF">OFF</button>
+        <button data-mode="ON">ON</button>
+        <button data-mode="C2C">C2C</button>
+      </div>
+    </div>
+
+    <!-- Local triggers (ON mode) -->
+    <div class="section group" id="localGroup">
+      <div class="label">Time trigger</div>
+      <div class="row">
+        <label><input type="checkbox" id="timeEnabled" /> Enabled</label>
+      </div>
+      <div class="row">
+        <span>Every</span>
+        <span><input type="number" id="timeIntervalSec" min="1" step="1" /> s</span>
+      </div>
+      <div class="row">
+        <span>Probability</span>
+        <span><input type="range" id="timeProbability" min="0" max="100" step="1" /> <span class="sub" id="timeProbVal"></span></span>
+      </div>
+
+      <div class="label" style="margin-top:14px;">Keystroke trigger</div>
+      <div class="row">
+        <label><input type="checkbox" id="keysEnabled" /> Enabled</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="trackEnter" /> Enter</label>
+        <label><input type="checkbox" id="trackBackspace" /> Backspace</label>
+      </div>
+      <div class="row">
+        <span>Every</span>
+        <span><input type="number" id="keyThreshold" min="1" step="1" /> keys</span>
+      </div>
+      <div class="row">
+        <span>Probability</span>
+        <span><input type="range" id="keyProbability" min="0" max="100" step="1" /> <span class="sub" id="keyProbVal"></span></span>
+      </div>
+    </div>
+
+    <!-- C2C -->
+    <div class="section group" id="c2cGroup">
+      <div class="label">C2C server</div>
+      <div class="row" style="display:block;">
+        <input type="text" id="serverUrl" placeholder="ws://localhost:8787" />
+      </div>
+      <div class="row" style="display:block; margin-top:8px;">
+        <input type="text" id="clientName" placeholder="This browser's name (for targeting)" />
+      </div>
+      <div class="row">
+        <span class="sub">Status</span>
+        <span class="status" id="c2cStatus">disconnected</span>
+      </div>
+    </div>
+
+    <!-- Sounds + volume -->
+    <div class="section">
+      <div class="label">Sounds (none selected = all)</div>
+      <div class="sounds" id="sounds"></div>
+      <div class="row" style="margin-top:12px;">
+        <span>Volume</span>
+        <span><input type="range" id="volume" min="0" max="100" step="1" /> <span class="sub" id="volVal"></span></span>
+      </div>
+      <div class="row">
+        <span>Boost</span>
+        <span><input type="range" id="boost" min="100" max="500" step="10" /> <span class="sub" id="boostVal"></span></span>
+      </div>
+    </div>
+
+    <!-- Anti-spam -->
+    <div class="section">
+      <div class="label">Anti-spam</div>
+      <div class="row">
+        <span>Cooldown</span>
+        <span><input type="number" id="cooldownSec" min="0" step="1" /> s</span>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="quietEnabled" /> Quiet hours</label>
+        <span>
+          <input type="time" id="quietStart" /> → <input type="time" id="quietEnd" />
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="testBtn" class="primary">Test sound</button>
+    </div>
+    <div class="section" style="border-bottom:none; padding-top:0;">
+      <div class="sub" id="testMsg"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Minguito · C2C control panel</title>
+    <style>
+      :root { --bg:#0f0f17; --card:#1a1a26; --line:#2a2a3a; --text:#e9e9f1; --muted:#9a9ab0; --accent:#7c3aed; --green:#22c55e; }
+      * { box-sizing: border-box; }
+      body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:28px; }
+      .wrap { max-width:680px; margin:0 auto; }
+      h1 { margin:0 0 4px; font-size:22px; }
+      .sub { color:var(--muted); margin-bottom:24px; }
+      .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+      .card h2 { margin:0 0 14px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+      .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; background:var(--bg); border:1px solid var(--line); }
+      .pill .dot { width:9px; height:9px; border-radius:50%; background:var(--green); }
+      .grid { display:flex; flex-wrap:wrap; gap:10px; }
+      button { font:inherit; cursor:pointer; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--text); padding:10px 14px; }
+      button:hover { border-color:var(--accent); }
+      button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+      .tag { font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 5px; margin-left:6px; }
+      .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+      label.field { display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:12px; }
+      input[type=number] { width:90px; padding:7px 9px; background:var(--bg); border:1px solid var(--line); border-radius:7px; color:var(--text); }
+      input[type=range] { width:160px; }
+      select { font:inherit; padding:8px 10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--text); }
+      .clients { color:var(--muted); font-size:13px; margin-top:8px; }
+      .drop { border:1.5px dashed var(--line); border-radius:10px; padding:18px; text-align:center; color:var(--muted); cursor:pointer; }
+      .drop.over { border-color:var(--accent); color:var(--text); }
+      .switch { font-weight:600; }
+      .switch.on { color:var(--green); }
+      .log { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--muted); white-space:pre-wrap; max-height:160px; overflow:auto; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Minguito · C2C</h1>
+      <div class="sub">Command connected browsers to play sounds.</div>
+
+      <div class="card">
+        <h2>Connected browsers</h2>
+        <div class="row">
+          <span class="pill"><span class="dot"></span><b id="clients">0</b>&nbsp;connected</span>
+          <button onclick="refresh()">Refresh</button>
+        </div>
+        <div class="clients" id="clientList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Play now</h2>
+        <div class="row" style="margin-bottom:12px;">
+          <label class="field">Target
+            <select id="target"><option value="all">All browsers</option></select>
+          </label>
+        </div>
+        <div class="grid" id="soundBtns"></div>
+        <div style="margin-top:12px;">
+          <button class="primary" onclick="play()">🎲 Play random</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Add a sound</h2>
+        <div class="drop" id="drop">Drop an mp3 / wav here, or click to choose a file</div>
+        <input type="file" id="file" accept="audio/*" style="display:none" />
+        <div class="sub" id="uploadMsg" style="margin:8px 0 0;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Auto fire (server-driven)</h2>
+        <div class="row">
+          <label class="field">Interval (s)
+            <input type="number" id="interval" min="1" value="30" />
+          </label>
+          <label class="field">Probability <span id="probVal">50%</span>
+            <input type="range" id="prob" min="0" max="100" value="50" oninput="probVal.textContent=this.value+'%'" />
+          </label>
+          <button id="autoBtn" onclick="toggleAuto()">Start</button>
+          <span class="switch" id="autoState">OFF</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Log</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <script>
+      const api = (p, opts) => fetch(p, opts).then((r) => r.json());
+      let autoOn = false;
+
+      function log(msg) {
+        const el = document.getElementById("log");
+        el.textContent = "› " + msg + "\n" + el.textContent;
+      }
+
+      async function refresh() {
+        const s = await api("/api/state");
+        document.getElementById("clients").textContent = s.clients.length;
+        renderClients(s.clients);
+        renderSounds(s.sounds);
+        autoOn = s.auto.enabled;
+        document.getElementById("interval").value = s.auto.intervalSec;
+        document.getElementById("prob").value = Math.round(s.auto.probability * 100);
+        document.getElementById("probVal").textContent = Math.round(s.auto.probability * 100) + "%";
+        renderAuto();
+      }
+
+      function renderClients(list) {
+        document.getElementById("clientList").textContent = list.length
+          ? "• " + list.map((c) => c.name).join("   • ")
+          : "No browsers connected (set a browser to C2C mode).";
+
+        const sel = document.getElementById("target");
+        const prev = sel.value;
+        sel.innerHTML = '<option value="all">All browsers</option>';
+        for (const c of list) {
+          const o = document.createElement("option");
+          o.value = c.id;
+          o.textContent = c.name;
+          sel.appendChild(o);
+        }
+        sel.value = [...sel.options].some((o) => o.value === prev) ? prev : "all";
+      }
+
+      function renderSounds(sounds) {
+        const wrap = document.getElementById("soundBtns");
+        wrap.innerHTML = "";
+        if (!sounds.length) {
+          wrap.innerHTML = '<span class="sub">No sounds yet — connect a browser or upload one.</span>';
+          return;
+        }
+        for (const s of sounds) {
+          const b = document.createElement("button");
+          b.innerHTML = "▶ " + s.label + (s.kind === "uploaded" ? '<span class="tag">uploaded</span>' : "");
+          b.onclick = () => play(s);
+          wrap.appendChild(b);
+        }
+      }
+
+      async function play(sound) {
+        const target = document.getElementById("target").value;
+        const body = { target };
+        if (sound) {
+          if (sound.kind === "uploaded") body.url = sound.url;
+          else body.sound = sound.sound;
+        }
+        const r = await api("/api/play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        log(`play "${r.url || r.sound || "random"}" -> ${r.sentTo} client(s) [${r.target}]`);
+      }
+
+      function renderAuto() {
+        document.getElementById("autoState").textContent = autoOn ? "ON" : "OFF";
+        document.getElementById("autoState").className = "switch " + (autoOn ? "on" : "");
+        document.getElementById("autoBtn").textContent = autoOn ? "Stop" : "Start";
+      }
+
+      async function toggleAuto() {
+        const r = await api("/api/auto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enabled: !autoOn,
+            intervalSec: Number(document.getElementById("interval").value),
+            probability: Number(document.getElementById("prob").value) / 100,
+          }),
+        });
+        autoOn = r.auto.enabled;
+        renderAuto();
+        log("auto " + (autoOn ? "started" : "stopped"));
+      }
+
+      // ---- Upload ----
+      const drop = document.getElementById("drop");
+      const fileInput = document.getElementById("file");
+      drop.onclick = () => fileInput.click();
+      fileInput.onchange = () => fileInput.files[0] && upload(fileInput.files[0]);
+      drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+      drop.ondragleave = () => drop.classList.remove("over");
+      drop.ondrop = (e) => {
+        e.preventDefault();
+        drop.classList.remove("over");
+        if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
+      };
+
+      async function upload(file) {
+        const msg = document.getElementById("uploadMsg");
+        msg.textContent = `uploading ${file.name}…`;
+        try {
+          const bytes = await file.arrayBuffer();
+          const r = await api("/api/upload?name=" + encodeURIComponent(file.name), {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: bytes,
+          });
+          if (r.ok) {
+            msg.textContent = `added "${r.name}" ✓`;
+            log(`uploaded ${r.name}`);
+            refresh();
+          } else {
+            msg.textContent = "upload failed: " + r.error;
+          }
+        } catch (e) {
+          msg.textContent = "upload failed: " + e;
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 4000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+[
+  { "file": "gallo.mp3",            "label": "Gallo" },
+  { "file": "phone.mp3",            "label": "Phone" },
+  { "file": "scream.mp3",           "label": "Scream" },
+  { "file": "scream2.mp3",          "label": "Scream 2" },
+  { "file": "scream3.mp3",          "label": "Scream 3" },
+  { "file": "scream6.mp3",          "label": "Scream 6" },
+  { "file": "scream7.mp3",          "label": "Scream 7" },
+  { "file": "what_are_u_doing.mp3", "label": "What are u doing" }
+]

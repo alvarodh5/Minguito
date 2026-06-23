@@ -1,0 +1,13 @@
+{
+  "name": "minguito-server",
+  "version": "1.0.0",
+  "description": "C2C server for the Minguito extension: commands connected browsers to play sounds.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
